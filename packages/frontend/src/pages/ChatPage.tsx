@@ -81,6 +81,11 @@ export function ChatPage() {
     loadSessions();
   }, [loadProjects, loadSessions]);
 
+  // Close file explorer when switching to free chat (no project)
+  useEffect(() => {
+    if (!activeProjectId) setFilesOpen(false);
+  }, [activeProjectId]);
+
   // ── Edit message handler ───────────────────────────────
   const handleEdit = useCallback((messageId: string, text: string) => {
     setEditingMessageId(messageId);
@@ -250,7 +255,7 @@ export function ChatPage() {
         sidebar={<Sidebar onOpenSettings={() => setSettingsOpen(true)} onSearch={() => setSearchOpen(true)} />}
         header={
           <Header
-            onToggleFiles={() => setFilesOpen((v) => !v)}
+            onToggleFiles={activeProjectId ? () => setFilesOpen((v) => !v) : undefined}
             filesOpen={filesOpen}
             onToggleTerminal={toggleTerminal}
             terminalOpen={terminalOpen}
