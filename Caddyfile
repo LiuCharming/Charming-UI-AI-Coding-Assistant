@@ -1,0 +1,6 @@
+# Charming UI — Caddy reverse proxy with auto HTTPS
+# Replace charming.yourdomain.com with your actual domain
+
+charming.yourdomain.com {
+    reverse_proxy frontend:80
+}

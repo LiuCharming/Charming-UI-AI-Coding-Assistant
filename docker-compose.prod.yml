@@ -1,0 +1,28 @@
+# ─── Charming UI — Production Override (HTTPS via Caddy) ───
+# Usage:
+#   docker compose --env-file .env.production \
+#     -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  # Override frontend — remove host port, let Caddy handle it
+  frontend:
+    ports: []  # internal only
+
+  # Automatic HTTPS with Let's Encrypt
+  caddy:
+    image: caddy:alpine
+    container_name: charming-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  caddy-data:

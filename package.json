@@ -1,0 +1,24 @@
+{
+  "name": "charming-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Charming UI — AI Coding Assistant",
+  "workspaces": [
+    "packages/shared",
+    "packages/backend",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w packages/backend\" \"npm run dev -w packages/frontend\"",
+    "dev:backend": "npm run dev -w packages/backend",
+    "dev:frontend": "npm run dev -w packages/frontend",
+    "build": "npm run build -w packages/shared && npm run build -w packages/backend && npm run build -w packages/frontend",
+    "lint": "eslint packages/*/src --ext .ts,.tsx",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.5.0"
+  }
+}

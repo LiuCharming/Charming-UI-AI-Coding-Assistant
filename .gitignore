@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.production
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+*.log
+.cgui/
+.vite/
+data/
+.claude/
+*.js.gz
+*.mjs.gz
