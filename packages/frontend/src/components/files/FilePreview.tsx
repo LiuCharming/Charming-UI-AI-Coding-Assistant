@@ -1,14 +1,16 @@
 /**
- * Fetches and displays file content.
- * Truncates at MAX_LINES to avoid rendering huge files.
+ * Fetches and displays file content with syntax highlighting.
  */
 
 import { useState, useEffect } from "react";
 import { rest } from "@/api/restClient";
 import { formatBytes } from "@/lib/format";
-import { FileText, Loader2, AlertTriangle } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
+import { getHighlighter, getCachedHighlight, setCachedHighlight, guessLangFromPath } from "@/lib/shiki";
+import { FileText, Loader2, AlertTriangle, Eye, Code2 } from "lucide-react";
+import { cn } from "@/lib/cn";
 
-const MAX_LINES = 200;
+const MAX_LINES = 300;
 
 interface FilePreviewProps {
   filePath: string | null;
@@ -27,22 +29,28 @@ function truncate(content: string): string {
 }
 
 export function FilePreview({ filePath }: FilePreviewProps) {
+  const { resolved: themeResolved } = useTheme();
+  const dark = themeResolved === "dark";
   const [content, setContent] = useState<string | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [highlightedHtml, setHighlightedHtml] = useState<string>("");
+  const [highlighting, setHighlighting] = useState(false);
 
   useEffect(() => {
     if (!filePath) {
       setContent(null);
       setMeta(null);
       setError(null);
+      setHighlightedHtml("");
       return;
     }
 
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setHighlightedHtml("");
 
     rest
       .get<{ content: string; size: number; modifiedAt: number }>(
@@ -50,7 +58,8 @@ export function FilePreview({ filePath }: FilePreviewProps) {
       )
       .then((data) => {
         if (cancelled) return;
-        setContent(truncate(data.content));
+        const truncated = truncate(data.content);
+        setContent(truncated);
         setMeta({ size: data.size, modifiedAt: data.modifiedAt });
       })
       .catch((err) => {
@@ -63,6 +72,44 @@ export function FilePreview({ filePath }: FilePreviewProps) {
 
     return () => { cancelled = true; };
   }, [filePath]);
+
+  // ── Highlight when content arrives ──
+  useEffect(() => {
+    if (!content || !filePath) return;
+
+    const text = content; // non-null after check
+    const lang = guessLangFromPath(filePath);
+    const cached = getCachedHighlight(dark, lang, text);
+    if (cached) {
+      setHighlightedHtml(cached);
+      return;
+    }
+
+    let cancelled = false;
+    setHighlighting(true);
+
+    async function highlight() {
+      try {
+        const hl = await getHighlighter(dark ? "dark" : "light");
+        if (cancelled) return;
+        const result = hl.codeToHtml(text, {
+          lang,
+          theme: dark ? "dark-plus" : "github-light",
+        });
+        if (!cancelled) {
+          setCachedHighlight(dark, lang, text, result);
+          setHighlightedHtml(result);
+        }
+      } catch {
+        if (!cancelled) setHighlightedHtml("");
+      } finally {
+        if (!cancelled) setHighlighting(false);
+      }
+    }
+
+    highlight();
+    return () => { cancelled = true; };
+  }, [content, filePath, dark]);
 
   // ── States ──────────────────────────────────────────
 
@@ -96,18 +143,61 @@ export function FilePreview({ filePath }: FilePreviewProps) {
     );
   }
 
+  const ext = (filePath.split(".").pop() || "").toLowerCase();
+  const langName = guessLangFromPath(filePath);
+
   return (
     <div className="h-full flex flex-col">
-      {meta && (
-        <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border text-[10px] text-muted-foreground shrink-0">
-          <span>{formatBytes(meta.size)}</span>
-          <span className="opacity-30">|</span>
-          <span>{new Date(meta.modifiedAt).toLocaleString()}</span>
+      {/* Meta bar */}
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0">
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <FileText size={11} />
+            <span className="font-mono text-xs">{filePath.split(/[/\\]/).pop()}</span>
+          </span>
+          {meta && (
+            <>
+              <span className="opacity-30">|</span>
+              <span>{formatBytes(meta.size)}</span>
+              <span className="opacity-30">|</span>
+              <span>{new Date(meta.modifiedAt).toLocaleString()}</span>
+            </>
+          )}
         </div>
+        <span className={cn(
+          "text-[10px] px-1.5 py-0.5 rounded",
+          "bg-secondary text-muted-foreground"
+        )}>
+          {highlighting ? (
+            <span className="flex items-center gap-1">
+              <Loader2 size={10} className="animate-spin" />
+              highlighting...
+            </span>
+          ) : highlightedHtml ? (
+            <span className="flex items-center gap-1">
+              <Eye size={10} />
+              {langName}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1">
+              <Code2 size={10} />
+              {langName}
+            </span>
+          )}
+        </span>
+      </div>
+
+      {/* Content */}
+      {highlightedHtml ? (
+        <div
+          className="flex-1 overflow-auto p-3 text-xs leading-relaxed shiki-wrapper [&_.shiki]:bg-transparent! [&_.shiki]:p-0! [&_pre]:whitespace-pre-wrap [&_pre]:break-all"
+          dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+        />
+      ) : (
+        <pre className="flex-1 overflow-auto p-3 text-xs font-mono text-foreground/90 whitespace-pre leading-relaxed">
+          {content}
+        </pre>
       )}
-      <pre className="flex-1 overflow-auto p-3 text-xs font-mono text-foreground/90 whitespace-pre leading-relaxed">
-        {content}
-      </pre>
     </div>
   );
 }

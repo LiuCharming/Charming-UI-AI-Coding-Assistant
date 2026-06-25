@@ -1,66 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useTheme } from "@/hooks/useTheme";
-
-// Shiki imports
-let highlighterPromise: Promise<import("shiki").Highlighter> | null = null;
-let currentTheme: "dark" | "light" = "dark";
-
-async function getHighlighter(theme: "dark" | "light") {
-  // Re-create if theme changed
-  if (highlighterPromise && currentTheme !== theme) {
-    highlighterPromise = null;
-  }
-  if (!highlighterPromise) {
-    currentTheme = theme;
-    highlighterPromise = import("shiki").then(({ createHighlighter }) =>
-      createHighlighter({
-        themes: [theme === "dark" ? "dark-plus" : "github-light"],
-        langs: [
-          "typescript",
-          "javascript",
-          "tsx",
-          "jsx",
-          "python",
-          "json",
-          "html",
-          "css",
-          "bash",
-          "shell",
-          "sh",
-          "yaml",
-          "yml",
-          "markdown",
-          "md",
-          "sql",
-          "rust",
-          "go",
-          "java",
-          "c",
-          "cpp",
-          "csharp",
-          "ruby",
-          "php",
-          "swift",
-          "kotlin",
-          "xml",
-          "diff",
-          "plaintext",
-          "text",
-        ],
-      })
-    );
-  }
-  return highlighterPromise;
-}
+import { getHighlighter, getCachedHighlight, setCachedHighlight, normalizeLang } from "@/lib/shiki";
 
 interface CodeBlockProps {
   children: string;
   language?: string;
 }
-
-// Cache highlighted results to avoid re-highlighting
-const highlightCache = new Map<string, string>();
-const MAX_CACHE_SIZE = 200;
 
 export function CodeBlock({ children, language }: CodeBlockProps) {
   const { resolved: themeResolved } = useTheme();
@@ -68,8 +13,7 @@ export function CodeBlock({ children, language }: CodeBlockProps) {
   const [html, setHtml] = useState<string>("");
   const mountedRef = useRef(true);
 
-  const cacheKey = `${dark ? "dark" : "light"}:${language || "text"}:${children}`;
-  const cached = highlightCache.get(cacheKey);
+  const cached = getCachedHighlight(dark, language || "text", children);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -93,16 +37,10 @@ export function CodeBlock({ children, language }: CodeBlockProps) {
         });
 
         if (!cancelled && mountedRef.current) {
-          // Trim cache if too large
-          if (highlightCache.size >= MAX_CACHE_SIZE) {
-            const firstKey = highlightCache.keys().next().value;
-            if (firstKey) highlightCache.delete(firstKey);
-          }
-          highlightCache.set(cacheKey, result);
+          setCachedHighlight(dark, language || "text", children, result);
           setHtml(result);
         }
       } catch {
-        // Fallback: Shiki can't highlight this language, show plain
         if (!cancelled && mountedRef.current) {
           setHtml("");
         }
@@ -115,9 +53,8 @@ export function CodeBlock({ children, language }: CodeBlockProps) {
       cancelled = true;
       mountedRef.current = false;
     };
-  }, [cacheKey, cached, children, language, dark]);
+  }, [cached, children, language, dark]);
 
-  // If we have highlighted HTML, render it
   if (html) {
     return (
       <div
@@ -127,35 +64,9 @@ export function CodeBlock({ children, language }: CodeBlockProps) {
     );
   }
 
-  // Fallback: plain code with basic styling
   return (
     <code className="font-mono text-sm block overflow-x-auto whitespace-pre">
       {children}
     </code>
   );
-}
-
-function normalizeLang(lang: string): string {
-  const map: Record<string, string> = {
-    ts: "typescript",
-    js: "javascript",
-    jsx: "jsx",
-    tsx: "tsx",
-    py: "python",
-    rb: "ruby",
-    sh: "bash",
-    shell: "bash",
-    zsh: "bash",
-    yml: "yaml",
-    md: "markdown",
-    cs: "csharp",
-    cpp: "cpp",
-    cc: "cpp",
-    cxx: "cpp",
-    kt: "kotlin",
-    txt: "text",
-    plaintext: "text",
-    "": "text",
-  };
-  return map[lang.toLowerCase()] || lang.toLowerCase();
 }
