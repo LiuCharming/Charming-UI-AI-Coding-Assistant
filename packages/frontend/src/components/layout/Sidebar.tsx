@@ -20,17 +20,18 @@ export function Sidebar({ onOpenSettings, onSearch }: SidebarProps) {
   const { activeProjectId } = useProjectStore();
   const [search, setSearch] = useState("");
 
-  // Filter by project: when a project is selected, show its sessions +
-  // legacy sessions that have no projectId (unassociated).
+  // Filter by project:
+  // - Free chat mode: only sessions with no projectId
+  // - Project mode: sessions matching the project + unassociated legacy sessions
   const filtered = sessions.filter((s) => {
     if (search && !s.title.toLowerCase().includes(search.toLowerCase())) {
       return false;
     }
     if (activeProjectId) {
-      // Show sessions belonging to this project OR sessions not yet associated with any project
       return s.projectId === activeProjectId || !s.projectId;
     }
-    return true;
+    // Free chat mode: only show unassociated sessions
+    return !s.projectId;
   });
 
   return (
