@@ -51,7 +51,7 @@ export function Header({ onToggleFiles, filesOpen, onToggleTerminal, terminalOpe
       {/* Left: session info */}
       <div className="flex items-center gap-3">
         <h1 className="text-sm font-medium text-foreground truncate max-w-[300px]">
-          {activeSession?.title || "CGUI"}
+          {activeSession?.title || "Charming UI"}
         </h1>
         {activeProject && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary rounded-full px-2 py-0.5">

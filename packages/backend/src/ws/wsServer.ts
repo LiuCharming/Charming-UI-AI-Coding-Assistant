@@ -28,7 +28,7 @@ export function createWSServer(httpServer: Server) {
       type: "system",
       payload: {
         sessionId: "",
-        message: "Connected to CGUI server",
+        message: "Connected to Charming UI server",
       },
     });
 

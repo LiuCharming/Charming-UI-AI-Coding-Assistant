@@ -1,6 +1,6 @@
 /**
  * Project persistence — CRUD for project metadata.
- * Stored in ~/.cgui/projects.json
+ * Stored in ~/.charming-ui/projects.json
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";

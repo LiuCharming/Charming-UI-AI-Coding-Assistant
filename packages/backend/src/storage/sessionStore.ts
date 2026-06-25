@@ -1,5 +1,5 @@
 /**
- * Session persistence — reads/writes session JSON files in ~/.cgui/sessions/
+ * Session persistence — reads/writes session JSON files in ~/.charming-ui/sessions/
  */
 
 import { readFileSync, writeFileSync, readdirSync, unlinkSync, existsSync, mkdirSync } from "fs";

@@ -181,7 +181,7 @@ packages/
 | UI Components | Radix UI, react-markdown, Shiki, KaTeX, Lucide Icons, xterm.js |
 | Backend | Node.js, Express, ws, node-pty |
 | AI SDK | @anthropic-ai/claude-agent-sdk (Anthropic), native fetch (OpenAI-compatible) |
-| Storage | JSON files in `~/.cgui/` (sessions, projects, settings) |
+| Storage | JSON files in `~/.charming-ui/` (sessions, projects, settings) |
 
 ## Configuration
 

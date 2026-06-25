@@ -1,6 +1,6 @@
 /**
  * REST routes for session management.
- * Sessions are persisted as JSON files in ~/.cgui/sessions/
+ * Sessions are persisted as JSON files in ~/.charming-ui/sessions/
  */
 
 import { Router } from "express";

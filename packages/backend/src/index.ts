@@ -1,5 +1,5 @@
 /**
- * CGUI Backend — Entry point.
+ * Charming UI Backend — Entry point.
  * Boots Express + WebSocket server.
  */
 
@@ -30,7 +30,7 @@ async function main() {
 
   server.listen(config.port, () => {
     log.info("╔══════════════════════════════════════╗");
-    log.info("║        CGUI Backend Server           ║");
+    log.info("║     Charming UI Backend Server        ║");
     log.info("╠══════════════════════════════════════╣");
     log.info({ port: config.port }, "║ HTTP + WS server listening");
     log.info({ url: config.frontendUrl }, "║ Frontend origin");
