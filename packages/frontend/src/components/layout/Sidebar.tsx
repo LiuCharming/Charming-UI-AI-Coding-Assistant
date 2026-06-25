@@ -24,7 +24,7 @@ export function Sidebar({ onOpenSettings, onSearch }: SidebarProps) {
   );
 
   return (
-    <form autoComplete="off" className="flex flex-col h-full">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-3 flex items-center justify-between border-b border-border">
         <span className="font-semibold text-sm text-sidebar-foreground">
@@ -149,6 +149,6 @@ export function Sidebar({ onOpenSettings, onSearch }: SidebarProps) {
       <div className="p-2 border-t border-border text-xs text-muted-foreground text-center">
         {t("sidebar.version")}
       </div>
-    </form>
+    </div>
   );
 }

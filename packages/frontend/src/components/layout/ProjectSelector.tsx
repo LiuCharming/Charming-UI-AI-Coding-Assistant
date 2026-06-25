@@ -30,6 +30,7 @@ export function ProjectSelector() {
       <div className="relative">
         {/* Trigger */}
         <button
+          type="button"
           onClick={() => setIsOpen(!isOpen)}
           className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
         >

@@ -43,6 +43,8 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [mcpEnvText, setMcpEnvText] = useState("");    // KEY=VALUE per line
   const [mcpHeadersText, setMcpHeadersText] = useState(""); // KEY: VALUE per line
   const [mcpArgsText, setMcpArgsText] = useState("");  // one arg per line
+  const [addingProvider, setAddingProvider] = useState(false);
+  const [newProviderType, setNewProviderType] = useState<ProviderConfig["type"]>("openai_compatible");
 
   // ── System prompt: local state + debounced save ──
   const [systemPromptDraft, setSystemPromptDraft] = useState("");
@@ -709,26 +711,56 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                   </div>
                 ))}
 
-                {/* Add provider button */}
-                <button
-                  onClick={() => {
-                    const newProvider: ProviderConfig = {
-                      id: `custom_${Date.now()}`,
-                      name: t("settings.customProvider"),
-                      type: "openai_compatible",
-                      apiKey: "",
-                      baseUrl: "",
-                      enabled: true,
-                      isDefault: false,
-                      models: [],
-                    };
-                    saveSettings({ providers: [...settings.providers, newProvider] });
-                  }}
-                  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
-                >
-                  <Plus size={16} />
-                  {t("settings.addProvider")}
-                </button>
+                {/* Add provider */}
+                {addingProvider ? (
+                  <div className="p-4 rounded-xl border-2 border-primary/30 bg-card space-y-3">
+                    <div className="text-xs text-muted-foreground">Provider Type</div>
+                    <select
+                      value={newProviderType}
+                      onChange={(e) => setNewProviderType(e.target.value as ProviderConfig["type"])}
+                      className="w-full text-sm bg-secondary rounded-lg px-3 py-2 border border-border outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="openai_compatible">OpenAI Compatible — DeepSeek, OpenAI, OpenRouter, Azure…</option>
+                      <option value="anthropic">Anthropic — Claude SDK (requires sk-ant-… key)</option>
+                    </select>
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => {
+                          const newProvider: ProviderConfig = {
+                            id: `custom_${Date.now()}`,
+                            name: newProviderType === "anthropic" ? "Anthropic" : t("settings.customProvider"),
+                            type: newProviderType,
+                            apiKey: "",
+                            baseUrl: newProviderType === "anthropic" ? "https://api.anthropic.com" : "",
+                            enabled: true,
+                            isDefault: false,
+                            models: [],
+                          };
+                          saveSettings({ providers: [...settings.providers, newProvider] });
+                          setAddingProvider(false);
+                          setNewProviderType("openai_compatible");
+                        }}
+                        className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+                      >
+                        {t("settings.addProvider")}
+                      </button>
+                      <button
+                        onClick={() => setAddingProvider(false)}
+                        className="px-4 py-2 rounded-lg bg-secondary text-sm hover:bg-border transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setAddingProvider(true)}
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+                  >
+                    <Plus size={16} />
+                    {t("settings.addProvider")}
+                  </button>
+                )}
               </div>
             )}
 

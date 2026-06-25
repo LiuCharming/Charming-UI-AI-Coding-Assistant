@@ -147,7 +147,7 @@ export function useWsMessages() {
               useSessionStore.getState().setInterimUsage({
                 input: cost.input || 0,
                 output: cost.output || 0,
-                cost: cost.costUSD || 0,
+                cost: 0, // real-time token counts only; cost computed on turn end
               });
             }
           }

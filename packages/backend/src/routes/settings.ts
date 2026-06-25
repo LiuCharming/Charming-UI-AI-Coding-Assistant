@@ -26,7 +26,19 @@ function loadSettings(): UserSettings {
       const raw = readFileSync(SETTINGS_FILE, "utf-8");
       const parsed = JSON.parse(raw);
       // Merge with defaults so that new fields always get their default values
-      settings = { ...getDefaultSettings(), ...parsed };
+      const defaults = getDefaultSettings();
+      settings = { ...defaults, ...parsed };
+
+      // Ensure built-in providers always exist (user may have overwritten the providers array)
+      if (parsed.providers && Array.isArray(parsed.providers)) {
+        const mergedProviders = [...parsed.providers];
+        for (const bp of defaults.providers) {
+          if (!mergedProviders.find((p) => p.id === bp.id)) {
+            mergedProviders.push(bp);
+          }
+        }
+        settings.providers = mergedProviders;
+      }
     } else {
       return getDefaultSettings();
     }

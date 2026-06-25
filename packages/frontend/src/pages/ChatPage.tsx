@@ -274,6 +274,7 @@ export function ChatPage() {
           <ChatView
             scrollToIndex={scrollToIndex}
             onScrollComplete={handleScrollComplete}
+            scrollBottomKey={activeSessionId}
             onRegenerate={regenerate}
             onEdit={handleEdit}
             onFork={handleFork}

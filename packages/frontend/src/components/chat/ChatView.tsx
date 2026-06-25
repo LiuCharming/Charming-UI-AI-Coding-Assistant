@@ -11,12 +11,14 @@ interface ChatViewProps {
   scrollToIndex?: number | null;
   /** Called after scroll completes to acknowledge the navigation. */
   onScrollComplete?: () => void;
+  /** Changing this key triggers scroll-to-bottom (session switch). */
+  scrollBottomKey?: string | null;
   onRegenerate?: () => void;
   onEdit?: (messageId: string, text: string) => void;
   onFork?: (messageId: string) => void;
 }
 
-export function ChatView({ scrollToIndex, onScrollComplete, onRegenerate, onEdit, onFork }: ChatViewProps) {
+export function ChatView({ scrollToIndex, onScrollComplete, scrollBottomKey, onRegenerate, onEdit, onFork }: ChatViewProps) {
   const { t, tArray } = useI18n();
   const { messages, isStreaming } = useChatStore();
   const { sendPrompt } = useChatActions();
@@ -61,6 +63,28 @@ export function ChatView({ scrollToIndex, onScrollComplete, onRegenerate, onEdit
     }
     prevIndex.current = scrollToIndex;
   }, [scrollToIndex, onScrollComplete]);
+
+  // ── Auto-scroll to bottom on session switch ──────────
+  const prevScrollBottomKey = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (
+      scrollBottomKey != null &&
+      scrollBottomKey !== prevScrollBottomKey.current &&
+      messages.length > 0
+    ) {
+      prevScrollBottomKey.current = scrollBottomKey;
+      // Delay to let Virtuoso process the new messages first
+      const timer = setTimeout(() => {
+        virtuosoRef.current?.scrollToIndex({
+          index: messages.length - 1,
+          align: "end",
+          behavior: "auto",
+        });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+    prevScrollBottomKey.current = scrollBottomKey;
+  }, [scrollBottomKey, messages.length]);
 
   // ── Empty state (shown when messages.length === 0) ─────
   const EmptyState = useCallback(

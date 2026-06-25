@@ -38,8 +38,15 @@ export function TerminalPanel() {
     }
   }, [loadCondaEnvs]);
 
+  const { isOpen: terminalOpen } = useTerminalStore();
+
   // ── Create and manage the xterm instance ──
   useEffect(() => {
+    // Don't start the PTY if the terminal panel is closed
+    if (!terminalOpen) {
+      return;
+    }
+
     const terminal = new Terminal({
       fontSize: 13,
       fontFamily:
@@ -118,9 +125,9 @@ export function TerminalPanel() {
       wsClient.send({ type: "terminal_stop" });
       setRunning(false);
     };
-    // Recreate when project, shell, or conda env changes
+    // Recreate when project, shell, conda env, or terminal open state changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProjectId, projects, selectedShell, selectedCondaEnv]);
+  }, [terminalOpen, activeProjectId, projects, selectedShell, selectedCondaEnv]);
 
   const handleShellChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
