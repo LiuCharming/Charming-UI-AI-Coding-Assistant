@@ -13,6 +13,7 @@ import { filesRouter } from "./routes/files";
 import { providersRouter } from "./routes/providers";
 import { browseRouter } from "./routes/browse";
 import { condaRouter } from "./routes/conda";
+import { sshRouter } from "./routes/ssh";
 import { createLogger } from "./utils/logger";
 
 const log = createLogger("app");
@@ -64,6 +65,7 @@ export function createApp() {
   app.use("/api/providers", providersRouter);
   app.use("/api/browse-directory", browseRouter);
   app.use("/api/conda-envs", condaRouter);
+  app.use("/api/ssh", sshRouter);
 
   // 404 handler
   app.use((_req, res) => {

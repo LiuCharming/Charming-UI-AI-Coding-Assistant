@@ -1,5 +1,16 @@
 // Project management types
 
+export interface SSHConnectionConfig {
+  host: string;
+  port: number;
+  username: string;
+  /** One of these must be set */
+  password?: string;
+  privateKey?: string;
+  /** Absolute path on the remote machine */
+  remotePath: string;
+}
+
 export interface ProjectMeta {
   id: string;
   name: string;
@@ -9,6 +20,10 @@ export interface ProjectMeta {
   lastOpenedAt: number;
   sessionCount: number;
   tags?: string[];
+  /** Connection type — local filesystem or remote via SSH */
+  connectionType?: "local" | "ssh";
+  /** SSH connection config (only for connectionType === "ssh") */
+  sshConfig?: SSHConnectionConfig;
 }
 
 export interface ProjectListResponse {

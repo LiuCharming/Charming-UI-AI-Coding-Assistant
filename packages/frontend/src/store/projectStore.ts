@@ -15,7 +15,12 @@ interface ProjectState {
   // Actions
   loadProjects: () => Promise<void>;
   setActiveProject: (id: string | null) => void;
-  createProject: (name: string, path: string, description?: string) => Promise<ProjectMeta>;
+  createProject: (
+    name: string,
+    path: string,
+    description?: string,
+    opts?: { connectionType?: "local" | "ssh"; sshConfig?: import("@cgui/shared").SSHConnectionConfig }
+  ) => Promise<ProjectMeta>;
   deleteProject: (id: string) => Promise<void>;
   getActiveProject: () => ProjectMeta | undefined;
   scanDirectory: (path: string) => Promise<{
@@ -52,11 +57,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   setActiveProject: (id) => set({ activeProjectId: id }),
 
-  createProject: async (name, path, description) => {
+  createProject: async (name, path, description, opts) => {
     const project = await rest.post<ProjectMeta>("/projects", {
       name,
       path,
       description,
+      connectionType: opts?.connectionType || "local",
+      sshConfig: opts?.sshConfig,
     });
     set((s) => ({
       projects: [project, ...s.projects],

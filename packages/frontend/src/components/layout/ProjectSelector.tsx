@@ -6,6 +6,7 @@ import {
   Trash2,
   FolderOpen,
   MessageSquare,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useProjectStore } from "@/store/projectStore";
@@ -36,7 +37,11 @@ export function ProjectSelector() {
           className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
         >
           {activeProject ? (
-            <Folder size={15} className="flex-shrink-0 text-primary" />
+            activeProject.connectionType === "ssh" ? (
+              <Globe size={15} className="flex-shrink-0 text-blue-500" />
+            ) : (
+              <Folder size={15} className="flex-shrink-0 text-primary" />
+            )
           ) : (
             <MessageSquare size={15} className="flex-shrink-0 text-muted-foreground" />
           )}
@@ -104,15 +109,24 @@ export function ProjectSelector() {
                         setIsOpen(false);
                       }}
                     >
-                      {project.id === activeProjectId ? (
+                      {project.connectionType === "ssh" ? (
+                        <Globe size={14} className="flex-shrink-0 text-blue-500" />
+                      ) : project.id === activeProjectId ? (
                         <FolderOpen size={14} className="flex-shrink-0" />
                       ) : (
                         <Folder size={14} className="flex-shrink-0 text-muted-foreground" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="truncate">{project.name}</div>
+                        <div className="truncate flex items-center gap-1">
+                          {project.name}
+                          {project.connectionType === "ssh" && (
+                            <span className="text-[10px] text-blue-500/70 flex-shrink-0">SSH</span>
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {project.path}
+                          {project.connectionType === "ssh"
+                            ? `${project.sshConfig?.username}@${project.sshConfig?.host}`
+                            : project.path}
                         </div>
                       </div>
                       <button

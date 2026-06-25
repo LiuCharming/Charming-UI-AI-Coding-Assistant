@@ -5,7 +5,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { resolve, basename } from "path";
-import type { ProjectMeta } from "@cgui/shared";
+import type { ProjectMeta, SSHConnectionConfig } from "@cgui/shared";
 import { config } from "../utils/config";
 import { createLogger } from "../utils/logger";
 import { randomUUID } from "crypto";
@@ -51,7 +51,11 @@ export function getProject(id: string): ProjectMeta | undefined {
 export function createProject(
   name: string,
   path: string,
-  description?: string
+  opts?: {
+    description?: string;
+    connectionType?: "local" | "ssh";
+    sshConfig?: SSHConnectionConfig;
+  }
 ): ProjectMeta {
   const projects = loadProjects();
 
@@ -63,8 +67,10 @@ export function createProject(
   const project: ProjectMeta = {
     id: randomUUID(),
     name,
-    path: resolve(path),
-    description,
+    path: opts?.connectionType === "ssh" ? opts.sshConfig?.remotePath || path : resolve(path),
+    description: opts?.description,
+    connectionType: opts?.connectionType || "local",
+    sshConfig: opts?.sshConfig,
     createdAt: Date.now(),
     lastOpenedAt: Date.now(),
     sessionCount: 0,
@@ -73,13 +79,13 @@ export function createProject(
   projects.push(project);
   saveProjects(projects);
 
-  log.info({ id: project.id, name, path: project.path }, "Project created");
+  log.info({ id: project.id, name, path: project.path, connectionType: project.connectionType }, "Project created");
   return project;
 }
 
 export function updateProject(
   id: string,
-  updates: Partial<Pick<ProjectMeta, "name" | "path" | "description" | "tags">>
+  updates: Partial<Pick<ProjectMeta, "name" | "path" | "description" | "tags" | "sshConfig" | "connectionType">>
 ): ProjectMeta | null {
   const projects = loadProjects();
   const idx = projects.findIndex((p) => p.id === id);

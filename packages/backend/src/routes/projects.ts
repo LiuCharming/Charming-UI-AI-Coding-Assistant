@@ -34,13 +34,17 @@ projectsRouter.get("/:id", (req, res) => {
 // Create project
 projectsRouter.post("/", (req, res) => {
   try {
-    const { name, path, description } = req.body;
+    const { name, path, description, connectionType, sshConfig } = req.body;
     if (!name || !path) {
       return res
         .status(400)
         .json({ error: "Name and path are required" });
     }
-    const project = createProject(name, path, description);
+    const project = createProject(name, path, {
+      description,
+      connectionType: connectionType || "local",
+      sshConfig,
+    });
     res.status(201).json(project);
   } catch (err) {
     const message =
