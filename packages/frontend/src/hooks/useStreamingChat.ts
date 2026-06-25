@@ -207,6 +207,7 @@ export function useChatActions() {
           text,
           sessionId: sid,
           cwd: activeProject?.path,
+          projectId: activeProjectId || undefined,
           providerId: activeProvider,
           modelId: activeModel,
           attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,

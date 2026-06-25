@@ -7,6 +7,7 @@ const en: Locale = {
     search: "Search sessions...",
     noSessions: "No sessions yet",
     noMatching: "No matching sessions",
+    noSessionsForProject: "No sessions in this project",
     newChat: "New Chat",
     settings: "Settings",
     deleteSession: "Delete session",

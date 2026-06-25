@@ -7,6 +7,7 @@ const zhCN = {
     search: "搜索会话...",
     noSessions: "暂无会话",
     noMatching: "无匹配会话",
+    noSessionsForProject: "该项目下暂无会话",
     newChat: "新建聊天",
     settings: "设置",
     deleteSession: "删除会话",

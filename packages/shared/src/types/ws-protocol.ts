@@ -8,6 +8,7 @@ export interface PromptPayload {
   text: string;
   sessionId?: string;
   cwd?: string;
+  projectId?: string;
   providerId?: string;
   modelId?: string;
   attachedFiles?: AttachedFile[];

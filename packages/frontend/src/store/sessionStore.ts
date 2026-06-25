@@ -22,7 +22,7 @@ interface SessionState {
   loadSessions: () => Promise<void>;
   setActiveSession: (id: string | null) => void;
   openSession: (id: string) => Promise<void>;
-  createSession: (title?: string) => Promise<SessionMeta>;
+  createSession: (title?: string, projectId?: string) => Promise<SessionMeta>;
   deleteSession: (id: string) => Promise<void>;
   renameSession: (id: string, title: string) => Promise<void>;
   setSdkSessionId: (id: string, sdkSessionId: string) => void;
@@ -113,11 +113,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  createSession: async (title) => {
+  createSession: async (title, projectId?) => {
     try {
       const session = await rest.post<SessionDetail>("/sessions", {
         title: title || "New Chat",
         cwd: "",
+        projectId: projectId || undefined,
       });
       set((s) => ({ sessions: [session, ...s.sessions] }));
       return session;
@@ -127,6 +128,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         id: `session_${Date.now()}`,
         title: title || "New Chat",
         cwd: "",
+        projectId: projectId || undefined,
         createdAt: Date.now(),
         lastActiveAt: Date.now(),
         messageCount: 0,

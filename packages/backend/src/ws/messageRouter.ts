@@ -103,7 +103,7 @@ export async function handleMessage(
 ): Promise<void> {
   switch (msg.type) {
     case "prompt": {
-      const { text, sessionId, cwd, providerId, modelId, attachedFiles, images, editFromMessageId } =
+      const { text, sessionId, cwd, projectId, providerId, modelId, attachedFiles, images, editFromMessageId } =
         msg.payload;
 
       const settings = loadSettings();
@@ -131,7 +131,7 @@ export async function handleMessage(
             id: sessionIdStr,
             title: text.substring(0, 60).replace(/\n/g, " "),
             cwd: sessionCwd,
-            projectId: undefined,
+            projectId: projectId,
           });
         }
 

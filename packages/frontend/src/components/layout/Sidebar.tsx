@@ -17,11 +17,21 @@ export function Sidebar({ onOpenSettings, onSearch }: SidebarProps) {
   const { t } = useI18n();
   const { sessions, activeSessionId, openSession, newChat, deleteSession } =
     useSessions();
+  const { activeProjectId } = useProjectStore();
   const [search, setSearch] = useState("");
 
-  const filtered = sessions.filter((s) =>
-    s.title.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filter by project: when a project is selected, show its sessions +
+  // legacy sessions that have no projectId (unassociated).
+  const filtered = sessions.filter((s) => {
+    if (search && !s.title.toLowerCase().includes(search.toLowerCase())) {
+      return false;
+    }
+    if (activeProjectId) {
+      // Show sessions belonging to this project OR sessions not yet associated with any project
+      return s.projectId === activeProjectId || !s.projectId;
+    }
+    return true;
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -97,7 +107,11 @@ export function Sidebar({ onOpenSettings, onSearch }: SidebarProps) {
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         {filtered.length === 0 ? (
           <div className="text-center text-muted-foreground text-sm py-8">
-            {search ? t("sidebar.noMatching") : t("sidebar.noSessions")}
+            {search
+              ? t("sidebar.noMatching")
+              : activeProjectId
+                ? t("sidebar.noSessionsForProject")
+                : t("sidebar.noSessions")}
           </div>
         ) : (
           filtered.map((session) => (
