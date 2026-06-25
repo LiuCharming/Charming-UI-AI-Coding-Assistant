@@ -29,15 +29,10 @@ function loadSettings(): UserSettings {
       const defaults = getDefaultSettings();
       settings = { ...defaults, ...parsed };
 
-      // Ensure built-in providers always exist (user may have overwritten the providers array)
-      if (parsed.providers && Array.isArray(parsed.providers)) {
-        const mergedProviders = [...parsed.providers];
-        for (const bp of defaults.providers) {
-          if (!mergedProviders.find((p) => p.id === bp.id)) {
-            mergedProviders.push(bp);
-          }
-        }
-        settings.providers = mergedProviders;
+      // Only restore built-in providers when the user has NO providers at all
+      // (fresh install or corrupted data). Otherwise respect the user's deletions.
+      if (!parsed.providers || !Array.isArray(parsed.providers) || parsed.providers.length === 0) {
+        settings.providers = defaults.providers;
       }
     } else {
       return getDefaultSettings();
