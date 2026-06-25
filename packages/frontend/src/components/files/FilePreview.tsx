@@ -2,13 +2,15 @@
  * Fetches and displays file content with syntax highlighting.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import ReactMarkdown from "react-markdown";
 import { rest } from "@/api/restClient";
 import { formatBytes } from "@/lib/format";
 import { useTheme } from "@/hooks/useTheme";
 import { getHighlighter, getCachedHighlight, setCachedHighlight, guessLangFromPath } from "@/lib/shiki";
 import { FileText, Loader2, AlertTriangle, Eye, Code2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { CodeBlock } from "@/components/chat/CodeBlock";
 
 const MAX_LINES = 300;
 
@@ -73,11 +75,13 @@ export function FilePreview({ filePath }: FilePreviewProps) {
     return () => { cancelled = true; };
   }, [filePath]);
 
-  // ── Highlight when content arrives ──
-  useEffect(() => {
-    if (!content || !filePath) return;
+  // ── Highlight when content arrives (skip markdown — rendered separately) ──
+  const isMarkdown = filePath ? /\.(md|mdx)$/i.test(filePath) : false;
 
-    const text = content; // non-null after check
+  useEffect(() => {
+    if (!content || !filePath || isMarkdown) return;
+
+    const text = content;
     const lang = guessLangFromPath(filePath);
     const cached = getCachedHighlight(dark, lang, text);
     if (cached) {
@@ -109,7 +113,31 @@ export function FilePreview({ filePath }: FilePreviewProps) {
 
     highlight();
     return () => { cancelled = true; };
-  }, [content, filePath, dark]);
+  }, [content, filePath, dark, isMarkdown]);
+
+  // ── Stable markdown components (no re-render on stream) ──────────────────
+  const markdownComponents = useMemo(
+    () => ({
+      code: ({ children, className, ...props }: any) => {
+        const isInline = !className;
+        if (isInline) {
+          return (
+            <code
+              className="bg-secondary text-foreground/90 rounded px-1 py-0.5 text-[11px] font-mono"
+              {...props}
+            >
+              {children}
+            </code>
+          );
+        }
+        const lang = className.replace("language-", "");
+        const codeString = String(children).replace(/\n$/, "");
+        return <CodeBlock language={lang}>{codeString}</CodeBlock>;
+      },
+      pre: ({ children }: any) => <>{children}</>,
+    }),
+    []
+  );
 
   // ── States ──────────────────────────────────────────
 
@@ -144,7 +172,7 @@ export function FilePreview({ filePath }: FilePreviewProps) {
   }
 
   const ext = (filePath.split(".").pop() || "").toLowerCase();
-  const langName = guessLangFromPath(filePath);
+  const langName = isMarkdown ? "Markdown" : guessLangFromPath(filePath);
 
   return (
     <div className="h-full flex flex-col">
@@ -173,6 +201,11 @@ export function FilePreview({ filePath }: FilePreviewProps) {
               <Loader2 size={10} className="animate-spin" />
               highlighting...
             </span>
+          ) : isMarkdown ? (
+            <span className="flex items-center gap-1">
+              <Eye size={10} />
+              {langName}
+            </span>
           ) : highlightedHtml ? (
             <span className="flex items-center gap-1">
               <Eye size={10} />
@@ -188,7 +221,13 @@ export function FilePreview({ filePath }: FilePreviewProps) {
       </div>
 
       {/* Content */}
-      {highlightedHtml ? (
+      {isMarkdown && content ? (
+        <div className="flex-1 overflow-auto p-4 text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none [&_table]:text-xs [&_th]:p-1.5 [&_td]:p-1.5 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_pre]:my-2 [&_pre]:rounded-lg">
+          <ReactMarkdown components={markdownComponents}>
+            {content}
+          </ReactMarkdown>
+        </div>
+      ) : highlightedHtml ? (
         <div
           className="flex-1 overflow-auto p-3 text-xs leading-relaxed shiki-wrapper [&_.shiki]:bg-transparent! [&_.shiki]:p-0! [&_pre]:whitespace-pre-wrap [&_pre]:break-all"
           dangerouslySetInnerHTML={{ __html: highlightedHtml }}
