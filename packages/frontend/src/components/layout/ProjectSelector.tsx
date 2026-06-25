@@ -5,6 +5,7 @@ import {
   Plus,
   Trash2,
   FolderOpen,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useProjectStore } from "@/store/projectStore";
@@ -34,9 +35,13 @@ export function ProjectSelector() {
           onClick={() => setIsOpen(!isOpen)}
           className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
         >
-          <Folder size={15} className="flex-shrink-0 text-primary" />
+          {activeProject ? (
+            <Folder size={15} className="flex-shrink-0 text-primary" />
+          ) : (
+            <MessageSquare size={15} className="flex-shrink-0 text-muted-foreground" />
+          )}
           <span className="flex-1 text-left truncate">
-            {activeProject?.name || t("project.select")}
+            {activeProject?.name || t("project.freeChat")}
           </span>
           <ChevronDown
             size={14}
@@ -56,14 +61,33 @@ export function ProjectSelector() {
             />
             <div className="absolute left-2 right-2 top-full mt-1 z-20 bg-popover border border-border rounded-lg shadow-xl overflow-hidden">
               <div className="max-h-60 overflow-y-auto py-1">
+                {/* Free chat — no project */}
+                <div
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors",
+                    !activeProjectId
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground hover:bg-secondary"
+                  )}
+                  onClick={() => {
+                    setActiveProject(null);
+                    setIsOpen(false);
+                  }}
+                >
+                  <MessageSquare size={14} className="flex-shrink-0" />
+                  <span>{t("project.freeChat")}</span>
+                  {!activeProjectId && (
+                    <span className="ml-auto text-[10px] opacity-60">{t("project.active")}</span>
+                  )}
+                </div>
+
+                {projects.length > 0 && (
+                  <div className="border-t border-border my-1" />
+                )}
+
                 {projects.length === 0 ? (
-                  <div className="px-3 py-4 text-center text-sm text-muted-foreground">
-                    {t("project.noProjects").split("\n").map((line, i) => (
-                      <span key={i}>
-                        {line}
-                        {i === 0 && <br />}
-                      </span>
-                    ))}
+                  <div className="px-3 py-2 text-center text-xs text-muted-foreground">
+                    {t("project.noProjects")}
                   </div>
                 ) : (
                   projects.map((project) => (

@@ -20,6 +20,8 @@ const en: Locale = {
   project: {
     select: "Select Project",
     noProjects: "No projects yet.\nAdd a project to get started.",
+    freeChat: "Free Chat",
+    active: "Active",
     addProject: "Add Project",
     deleteProject: "Delete project",
     createProject: "Create Project",

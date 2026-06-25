@@ -21,6 +21,8 @@ const zhCN = {
   project: {
     select: "选择项目",
     noProjects: "暂无项目。\n添加一个项目开始使用。",
+    freeChat: "自由对话",
+    active: "当前",
     addProject: "添加项目",
     deleteProject: "删除项目",
     createProject: "创建项目",
