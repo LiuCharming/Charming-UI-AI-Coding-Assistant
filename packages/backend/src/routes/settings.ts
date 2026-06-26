@@ -109,6 +109,11 @@ function getDefaultSettings(): UserSettings {
     compressionContextWindow: 128000,
     compressionThreshold: 75,
     compressionKeepRecent: 8,
+    maxTurns: 30,
+    apiTimeoutMs: 60000,
+    streamTimeoutMs: 120000,
+    streamChunkTimeoutMs: 90000,
+    permissionTimeoutMs: 120000,
   };
 }
 

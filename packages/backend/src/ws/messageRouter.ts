@@ -54,6 +54,11 @@ function loadSettings(): UserSettings {
     compressionContextWindow: 128000,
     compressionThreshold: 75,
     compressionKeepRecent: 8,
+    maxTurns: 30,
+    apiTimeoutMs: 60000,
+    streamTimeoutMs: 120000,
+    streamChunkTimeoutMs: 90000,
+    permissionTimeoutMs: 120000,
   };
 }
 
@@ -248,6 +253,11 @@ export async function handleMessage(
             compressionContextWindow: settings.compressionContextWindow,
             compressionThreshold: settings.compressionThreshold,
             compressionKeepRecent: settings.compressionKeepRecent,
+            maxTurns: settings.maxTurns,
+            apiTimeoutMs: settings.apiTimeoutMs,
+            streamTimeoutMs: settings.streamTimeoutMs,
+            streamChunkTimeoutMs: settings.streamChunkTimeoutMs,
+            permissionTimeoutMs: settings.permissionTimeoutMs,
           });
         } else {
           send(ws, {
@@ -354,6 +364,11 @@ export async function handleMessage(
             compressionContextWindow: regenSettings.compressionContextWindow,
             compressionThreshold: regenSettings.compressionThreshold,
             compressionKeepRecent: regenSettings.compressionKeepRecent,
+            maxTurns: regenSettings.maxTurns,
+            apiTimeoutMs: regenSettings.apiTimeoutMs,
+            streamTimeoutMs: regenSettings.streamTimeoutMs,
+            streamChunkTimeoutMs: regenSettings.streamChunkTimeoutMs,
+            permissionTimeoutMs: regenSettings.permissionTimeoutMs,
           });
         }
       } catch (error) {

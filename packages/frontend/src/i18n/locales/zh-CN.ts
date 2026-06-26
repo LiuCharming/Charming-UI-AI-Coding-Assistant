@@ -153,6 +153,20 @@ const zhCN = {
     compressionThresholdHint: "上下文使用率达到此百分比时自动压缩（如 75 = 75%）",
     compressionKeepRecent: "保留最近消息",
     compressionKeepRecentHint: "压缩时保留最近 N 条消息不作总结",
+
+    // Agent loop / timeout limits
+    agentLimits: "Agent 限制",
+    agentLimitsDesc: "控制 OpenAI 兼容提供商的对话循环和超时行为。",
+    maxTurns: "最大轮次",
+    maxTurnsHint: "单次对话中工具调用循环的最大次数（默认：30）",
+    apiTimeoutMs: "API 超时 (ms)",
+    apiTimeoutMsHint: "单次 API 请求的超时时间（默认：60000）",
+    streamTimeoutMs: "流式超时 (ms)",
+    streamTimeoutMsHint: "流式响应的超时时间（默认：120000）",
+    streamChunkTimeoutMs: "流块超时 (ms)",
+    streamChunkTimeoutMsHint: "超过此时间未收到数据则中止（默认：90000）",
+    permissionTimeoutMs: "权限超时 (ms)",
+    permissionTimeoutMsHint: "等待用户确认工具权限的超时时间（默认：120000）",
   },
 
   // Command palette

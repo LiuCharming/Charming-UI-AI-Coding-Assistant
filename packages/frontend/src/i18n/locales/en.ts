@@ -147,6 +147,20 @@ const en: Locale = {
     compressionThresholdHint: "Compress when context usage reaches this percentage (e.g. 75 = 75%)",
     compressionKeepRecent: "Keep Recent Messages",
     compressionKeepRecentHint: "Number of recent messages to preserve uncompressed",
+
+    // Agent loop / timeout limits
+    agentLimits: "Agent Limits",
+    agentLimitsDesc: "Control the conversation loop and timeout behavior for OpenAI-compatible providers.",
+    maxTurns: "Max Turns",
+    maxTurnsHint: "Maximum number of tool-calling loops per conversation (default: 30)",
+    apiTimeoutMs: "API Timeout (ms)",
+    apiTimeoutMsHint: "Timeout for individual API requests (default: 60000)",
+    streamTimeoutMs: "Stream Timeout (ms)",
+    streamTimeoutMsHint: "Timeout for streaming responses (default: 120000)",
+    streamChunkTimeoutMs: "Chunk Timeout (ms)",
+    streamChunkTimeoutMsHint: "Abort if no data received within this time (default: 90000)",
+    permissionTimeoutMs: "Permission Timeout (ms)",
+    permissionTimeoutMsHint: "Auto-deny tool permissions after waiting this long (default: 120000)",
   },
 
   // Command palette

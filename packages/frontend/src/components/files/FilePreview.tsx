@@ -1,18 +1,19 @@
 /**
  * Fetches and displays file content with syntax highlighting.
+ * Edit mode uses a transparent textarea overlaid on Shiki-highlighted code,
+ * so the editing style matches the preview exactly.
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { rest } from "@/api/restClient";
 import { formatBytes } from "@/lib/format";
 import { useTheme } from "@/hooks/useTheme";
 import { getHighlighter, getCachedHighlight, setCachedHighlight, guessLangFromPath } from "@/lib/shiki";
-import { FileText, Loader2, AlertTriangle, Eye, Code2 } from "lucide-react";
+import { FileText, Loader2, AlertTriangle, Eye, Code2, Pencil, Save, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { CodeBlock } from "@/components/chat/CodeBlock";
-
-const MAX_LINES = 300;
+import { toast } from "@/lib/toast";
 
 interface FilePreviewProps {
   filePath: string | null;
@@ -21,13 +22,6 @@ interface FilePreviewProps {
 interface Meta {
   size: number;
   modifiedAt: number;
-}
-
-function truncate(content: string): string {
-  const lines = content.split("\n");
-  if (lines.length <= MAX_LINES) return content;
-  return lines.slice(0, MAX_LINES).join("\n")
-    + `\n\n// ... ${lines.length - MAX_LINES} more lines ...`;
 }
 
 export function FilePreview({ filePath }: FilePreviewProps) {
@@ -39,6 +33,21 @@ export function FilePreview({ filePath }: FilePreviewProps) {
   const [error, setError] = useState<string | null>(null);
   const [highlightedHtml, setHighlightedHtml] = useState<string>("");
   const [highlighting, setHighlighting] = useState(false);
+  const [truncated, setTruncated] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editHighlightedHtml, setEditHighlightedHtml] = useState("");
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const highlightRef = useRef<HTMLDivElement>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Reset edit mode when file changes
+  useEffect(() => {
+    setEditing(false);
+    setEditHighlightedHtml("");
+  }, [filePath]);
 
   useEffect(() => {
     if (!filePath) {
@@ -46,6 +55,7 @@ export function FilePreview({ filePath }: FilePreviewProps) {
       setMeta(null);
       setError(null);
       setHighlightedHtml("");
+      setTruncated(false);
       return;
     }
 
@@ -53,16 +63,17 @@ export function FilePreview({ filePath }: FilePreviewProps) {
     setLoading(true);
     setError(null);
     setHighlightedHtml("");
+    setTruncated(false);
 
     rest
-      .get<{ content: string; size: number; modifiedAt: number }>(
+      .get<{ content: string; size: number; modifiedAt: number; truncated?: boolean }>(
         `/files/content?path=${encodeURIComponent(filePath)}`
       )
       .then((data) => {
         if (cancelled) return;
-        const truncated = truncate(data.content);
-        setContent(truncated);
+        setContent(data.content);
         setMeta({ size: data.size, modifiedAt: data.modifiedAt });
+        if (data.truncated) setTruncated(true);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -114,6 +125,97 @@ export function FilePreview({ filePath }: FilePreviewProps) {
     highlight();
     return () => { cancelled = true; };
   }, [content, filePath, dark, isMarkdown]);
+
+  // ── Live highlight for edit mode (debounced) ──────────
+  useEffect(() => {
+    if (!editing || !editContent) {
+      setEditHighlightedHtml("");
+      return;
+    }
+
+    const lang = guessLangFromPath(filePath ?? "");
+    const cached = getCachedHighlight(dark, `edit:${lang}`, editContent);
+    if (cached) {
+      setEditHighlightedHtml(cached);
+      return;
+    }
+
+    clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(async () => {
+      try {
+        const hl = await getHighlighter(dark ? "dark" : "light");
+        const result = hl.codeToHtml(editContent, {
+          lang,
+          theme: dark ? "dark-plus" : "github-light",
+        });
+        setCachedHighlight(dark, `edit:${lang}`, editContent, result);
+        setEditHighlightedHtml(result);
+      } catch {
+        // ignore
+      }
+    }, 200);
+
+    return () => clearTimeout(highlightTimerRef.current);
+  }, [editing, editContent, filePath, dark]);
+
+  // ── Sync scroll between textarea and highlight layer ──
+  const syncScroll = useCallback(() => {
+    const ta = textareaRef.current;
+    const hl = highlightRef.current;
+    if (ta && hl) {
+      hl.scrollTop = ta.scrollTop;
+      hl.scrollLeft = ta.scrollLeft;
+    }
+  }, []);
+
+  // ── Edit handlers ────────────────────────────────────
+  const enterEdit = useCallback(() => {
+    if (content != null) {
+      setEditContent(content);
+      setEditing(true);
+      setEditHighlightedHtml("");
+    }
+  }, [content]);
+
+  const cancelEdit = useCallback(() => {
+    setEditing(false);
+    setEditContent("");
+    setEditHighlightedHtml("");
+  }, []);
+
+  const saveFile = useCallback(async () => {
+    if (!filePath || saving) return;
+    setSaving(true);
+    try {
+      const data = await rest.post<{ size: number; modifiedAt: number }>(
+        "/files/save",
+        { path: filePath, content: editContent }
+      );
+      setContent(editContent);
+      setMeta({ size: data.size, modifiedAt: data.modifiedAt });
+      setHighlightedHtml("");
+      setEditing(false);
+      setEditHighlightedHtml("");
+      toast.success("File saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }, [filePath, editContent, saving]);
+
+  // Ctrl+S to save
+  useEffect(() => {
+    if (!editing) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        saveFile();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [editing, saveFile]);
 
   // ── Stable markdown components (no re-render on stream) ──────────────────
   const markdownComponents = useMemo(
@@ -171,11 +273,11 @@ export function FilePreview({ filePath }: FilePreviewProps) {
     );
   }
 
-  const ext = (filePath.split(".").pop() || "").toLowerCase();
   const langName = isMarkdown ? "Markdown" : guessLangFromPath(filePath);
+  const lineCount = content ? content.split("\n").length : 0;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       {/* Meta bar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0">
         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
@@ -188,40 +290,108 @@ export function FilePreview({ filePath }: FilePreviewProps) {
               <span className="opacity-30">|</span>
               <span>{formatBytes(meta.size)}</span>
               <span className="opacity-30">|</span>
+              <span>{lineCount.toLocaleString()} lines</span>
+              <span className="opacity-30">|</span>
               <span>{new Date(meta.modifiedAt).toLocaleString()}</span>
             </>
           )}
         </div>
-        <span className={cn(
-          "text-[10px] px-1.5 py-0.5 rounded",
-          "bg-secondary text-muted-foreground"
-        )}>
-          {highlighting ? (
-            <span className="flex items-center gap-1">
-              <Loader2 size={10} className="animate-spin" />
-              highlighting...
-            </span>
-          ) : isMarkdown ? (
-            <span className="flex items-center gap-1">
-              <Eye size={10} />
-              {langName}
-            </span>
-          ) : highlightedHtml ? (
-            <span className="flex items-center gap-1">
-              <Eye size={10} />
-              {langName}
-            </span>
+        <div className="flex items-center gap-1">
+          {editing ? (
+            <>
+              <button
+                onClick={saveFile}
+                disabled={saving}
+                className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 transition-colors disabled:opacity-50"
+              >
+                <Save size={10} />
+                {saving ? "saving..." : "save"}
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X size={10} />
+                cancel
+              </button>
+            </>
           ) : (
-            <span className="flex items-center gap-1">
-              <Code2 size={10} />
-              {langName}
-            </span>
+            <>
+              <button
+                onClick={enterEdit}
+                disabled={truncated}
+                className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                title={truncated ? "Cannot edit truncated files" : "Edit file"}
+              >
+                <Pencil size={10} />
+                edit
+              </button>
+              <span className={cn("text-[10px] px-1.5 py-0.5 rounded", "bg-secondary text-muted-foreground")}>
+                {highlighting ? (
+                  <span className="flex items-center gap-1">
+                    <Loader2 size={10} className="animate-spin" />
+                    highlighting...
+                  </span>
+                ) : isMarkdown ? (
+                  <span className="flex items-center gap-1">
+                    <Eye size={10} />
+                    {langName}
+                  </span>
+                ) : highlightedHtml ? (
+                  <span className="flex items-center gap-1">
+                    <Eye size={10} />
+                    {langName}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <Code2 size={10} />
+                    {langName}
+                  </span>
+                )}
+              </span>
+            </>
           )}
-        </span>
+        </div>
       </div>
 
+      {/* Truncation warning */}
+      {truncated && (
+        <div className="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1.5 shrink-0">
+          <AlertTriangle size={12} />
+          <span>File exceeds 5MB — showing first 1MB</span>
+        </div>
+      )}
+
       {/* Content */}
-      {isMarkdown && content ? (
+      {editing ? (
+        <div className="flex-1 min-h-0 relative">
+          {/* Highlight layer — Shiki output, scroll-synced with textarea */}
+          <div
+            ref={highlightRef}
+            className="absolute inset-0 overflow-hidden p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap break-all pointer-events-none shiki-wrapper [&_.shiki]:bg-transparent! [&_.shiki]:p-0! [&_pre]:whitespace-pre-wrap! [&_pre]:break-all! [&_pre]:m-0!"
+            dangerouslySetInnerHTML={{
+              __html: editHighlightedHtml || `<pre>${escapeHtml(editContent)}</pre>`,
+            }}
+          />
+          {/* Transparent textarea — captures input, highlight shows through */}
+          <textarea
+            ref={textareaRef}
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            onScroll={syncScroll}
+            className="absolute inset-0 w-full h-full resize-none bg-transparent font-mono text-xs p-3 leading-relaxed overflow-auto outline-none border-0"
+            style={{
+              color: "transparent",
+              caretColor: dark ? "#5296e2" : "#1a73e8",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
+              WebkitTextFillColor: "transparent",
+            }}
+            spellCheck={false}
+            autoFocus
+          />
+        </div>
+      ) : isMarkdown && content ? (
         <div className="flex-1 overflow-auto p-4 text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none [&_table]:text-xs [&_th]:p-1.5 [&_td]:p-1.5 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_pre]:my-2 [&_pre]:rounded-lg">
           <ReactMarkdown components={markdownComponents}>
             {content}
@@ -239,4 +409,13 @@ export function FilePreview({ filePath }: FilePreviewProps) {
       )}
     </div>
   );
+}
+
+/** Escape HTML so raw text can be shown inside dangerouslySetInnerHTML fallback. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

@@ -27,6 +27,13 @@ export interface OpenAIOptions {
   compressionContextWindow?: number;  // override context window in tokens (0 = use model default)
   compressionThreshold?: number;      // percentage of context window (e.g. 75 = 75%)
   compressionKeepRecent?: number;     // keep N most recent messages uncompressed
+
+  // Agent loop / timeout limits
+  maxTurns?: number;
+  apiTimeoutMs?: number;
+  streamTimeoutMs?: number;
+  streamChunkTimeoutMs?: number;
+  permissionTimeoutMs?: number;
 }
 
 type SendFn = (msg: ServerMessage) => void;
@@ -42,7 +49,7 @@ interface PendingPermission {
 }
 
 const pendingPermissions = new Map<string, PendingPermission>();
-const PERMISSION_TIMEOUT_MS = 120_000;
+const DEFAULT_PERMISSION_TIMEOUT_MS = 120_000;
 let permCounter = 0;
 
 export function resolveOpenAIPermission(requestId: string, approved: boolean): boolean {
@@ -99,7 +106,7 @@ async function checkPermission(
     const timer = setTimeout(() => {
       pendingPermissions.delete(requestId);
       resolve({ behavior: "deny" });
-    }, PERMISSION_TIMEOUT_MS);
+    }, options.permissionTimeoutMs ?? DEFAULT_PERMISSION_TIMEOUT_MS);
 
     pendingPermissions.set(requestId, {
       requestId,
@@ -295,7 +302,8 @@ async function summarizeConversation(
   modelId: string,
   apiKey: string,
   baseUrl: string,
-  sessionId: string
+  sessionId: string,
+  apiTimeoutMs: number
 ): Promise<string | null> {
   const log2 = createLogger("compression");
   const conversationText = oldMessages
@@ -331,7 +339,7 @@ Provide a compact summary (no more than 300 words). Only output the summary, no 
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(apiTimeoutMs),
   });
 
   if (!res.ok) {
@@ -439,6 +447,8 @@ async function streamChatCompletion(
   apiKey: string,
   baseUrl: string,
   tools: typeof BUILTIN_TOOLS | undefined,
+  streamTimeoutMs: number,
+  streamChunkTimeoutMs: number,
   onTextDelta: (text: string) => void,
   onUsage?: (usage: { input_tokens: number; output_tokens: number }) => void
 ): Promise<StreamResult> {
@@ -446,6 +456,7 @@ async function streamChatCompletion(
     model: model.id,
     messages,
     stream: true,
+    stream_options: { include_usage: true },
   };
 
   if (tools) {
@@ -462,7 +473,7 @@ async function streamChatCompletion(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(120_000),
+    signal: AbortSignal.timeout(streamTimeoutMs),
   });
 
   if (!res.ok) {
@@ -482,14 +493,16 @@ async function streamChatCompletion(
   let usageResult: { input_tokens: number; output_tokens: number } | undefined;
   let lastChunkTime = Date.now();
 
-  // Stream-level timeout: if no chunk arrives within 90s, abort
-  const STREAM_CHUNK_TIMEOUT_MS = 90_000;
+  // Stream-level timeout: if no chunk arrives within limit, abort
 
   while (true) {
     const readResult = await Promise.race([
       reader.read(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Stream read timeout: no data for 90s")), STREAM_CHUNK_TIMEOUT_MS)
+        setTimeout(
+          () => reject(new Error(`Stream read timeout: no data for ${streamChunkTimeoutMs / 1000}s`)),
+          streamChunkTimeoutMs
+        )
       ),
     ]);
     const { done, value } = readResult;
@@ -570,7 +583,7 @@ export async function runOpenAIAgent(
   options: OpenAIOptions
 ): Promise<void> {
   const { sessionId, model, apiKey, baseUrl, cwd } = options;
-  const MAX_TURNS = 30;
+  const MAX_TURNS = options.maxTurns ?? 30;
 
   log.info({ sessionId, model: model.id }, "Starting OpenAI agent (streaming)");
 
@@ -682,7 +695,8 @@ Be thorough and helpful. When you need information, use the tools available.`,
           const recentMessages = messages.slice(recentStart);
 
           const summary = await summarizeConversation(
-            oldMessages, model.id, apiKey, baseUrl, sessionId
+            oldMessages, model.id, apiKey, baseUrl, sessionId,
+            options.apiTimeoutMs ?? 60_000
           );
 
           if (summary) {
@@ -750,6 +764,8 @@ Be thorough and helpful. When you need information, use the tools available.`,
         apiKey,
         baseUrl,
         BUILTIN_TOOLS,
+        options.streamTimeoutMs ?? 120_000,
+        options.streamChunkTimeoutMs ?? 90_000,
         (text) => {
           // Stream each text chunk to the frontend in real time
           send({ type: "text_delta", payload: { sessionId, text } });
@@ -883,8 +899,10 @@ Be thorough and helpful. When you need information, use the tools available.`,
 
     // Calculate cost
     const costUSD =
-      (totalInputTokens / 1_000_000) * (model.inputCostPer1M || 2.5) +
-      (totalOutputTokens / 1_000_000) * (model.outputCostPer1M || 10);
+      model.inputCostPer1M != null && model.outputCostPer1M != null
+        ? (totalInputTokens / 1_000_000) * model.inputCostPer1M +
+          (totalOutputTokens / 1_000_000) * model.outputCostPer1M
+        : 0;
 
     send({
       type: "turn_result",

@@ -111,4 +111,11 @@ export interface UserSettings {
   compressionContextWindow: number;  // override context window size in tokens (0 = use model default)
   compressionThreshold: number;      // percentage of context window (e.g. 75 = 75%)
   compressionKeepRecent: number;     // keep N most recent messages uncompressed
+
+  // Agent loop / timeout limits (OpenAI-compatible provider)
+  maxTurns: number;                  // max agent loop turns
+  apiTimeoutMs: number;              // HTTP API call timeout
+  streamTimeoutMs: number;           // streaming request timeout
+  streamChunkTimeoutMs: number;      // no-data chunk timeout
+  permissionTimeoutMs: number;       // user permission wait timeout
 }

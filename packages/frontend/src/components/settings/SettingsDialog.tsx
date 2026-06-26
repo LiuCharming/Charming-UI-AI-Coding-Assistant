@@ -490,6 +490,116 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                   </div>
                 </div>
 
+                {/* Agent Loop / Timeout Limits */}
+                <div className="border-t border-border pt-4">
+                  <h3 className="text-sm font-medium text-foreground mb-1">
+                    {t("settings.agentLimits")}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {t("settings.agentLimitsDesc")}
+                  </p>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">
+                          {t("settings.maxTurns")}
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={200}
+                          value={settings.maxTurns ?? 30}
+                          onChange={(e) =>
+                            saveSettings({ maxTurns: Math.max(1, Number(e.target.value)) })
+                          }
+                          className="w-full text-sm bg-secondary rounded-lg px-3 py-2 border border-border outline-none focus:ring-1 focus:ring-ring"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t("settings.maxTurnsHint")}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">
+                          {t("settings.apiTimeoutMs")}
+                        </label>
+                        <input
+                          type="number"
+                          min={5000}
+                          max={600000}
+                          step={1000}
+                          value={settings.apiTimeoutMs ?? 60000}
+                          onChange={(e) =>
+                            saveSettings({ apiTimeoutMs: Math.max(5000, Number(e.target.value)) })
+                          }
+                          className="w-full text-sm bg-secondary rounded-lg px-3 py-2 border border-border outline-none focus:ring-1 focus:ring-ring"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t("settings.apiTimeoutMsHint")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">
+                          {t("settings.streamTimeoutMs")}
+                        </label>
+                        <input
+                          type="number"
+                          min={10000}
+                          max={600000}
+                          step={1000}
+                          value={settings.streamTimeoutMs ?? 120000}
+                          onChange={(e) =>
+                            saveSettings({ streamTimeoutMs: Math.max(10000, Number(e.target.value)) })
+                          }
+                          className="w-full text-sm bg-secondary rounded-lg px-3 py-2 border border-border outline-none focus:ring-1 focus:ring-ring"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t("settings.streamTimeoutMsHint")}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">
+                          {t("settings.streamChunkTimeoutMs")}
+                        </label>
+                        <input
+                          type="number"
+                          min={5000}
+                          max={600000}
+                          step={1000}
+                          value={settings.streamChunkTimeoutMs ?? 90000}
+                          onChange={(e) =>
+                            saveSettings({ streamChunkTimeoutMs: Math.max(5000, Number(e.target.value)) })
+                          }
+                          className="w-full text-sm bg-secondary rounded-lg px-3 py-2 border border-border outline-none focus:ring-1 focus:ring-ring"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t("settings.streamChunkTimeoutMsHint")}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">
+                        {t("settings.permissionTimeoutMs")}
+                      </label>
+                      <input
+                        type="number"
+                        min={10000}
+                        max={600000}
+                        step={5000}
+                        value={settings.permissionTimeoutMs ?? 120000}
+                        onChange={(e) =>
+                          saveSettings({ permissionTimeoutMs: Math.max(10000, Number(e.target.value)) })
+                        }
+                        className="w-24 text-sm bg-secondary rounded-lg px-3 py-2 border border-border outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t("settings.permissionTimeoutMsHint")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <h3 className="text-sm font-medium text-foreground mb-2">
                     {t("settings.systemPrompt")}
